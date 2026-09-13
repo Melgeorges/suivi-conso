@@ -1,0 +1,14 @@
+{
+  "name": "suivi-conso",
+  "version": "1.0.0",
+  "description": "Journal personnel de suivi de consommation",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "xlsx": "^0.18.5"
+  }
+}
