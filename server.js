@@ -36,6 +36,10 @@ db.exec(`
   );
 `);
 
+// Migrations non-destructives
+try { db.exec("ALTER TABLE batches ADD COLUMN shorts_hours REAL NOT NULL DEFAULT 0"); } catch (_) {}
+try { db.exec("ALTER TABLE batches ADD COLUMN is_victory INTEGER NOT NULL DEFAULT 0"); } catch (_) {}
+
 // ── Serveur ──────────────────────────────────────────────────────────────────
 const app = express();
 app.use(express.json());
@@ -72,19 +76,21 @@ app.get('/api/batches', auth, (req, res) => {
 });
 
 app.post('/api/batches', auth, (req, res) => {
-  const { logged_at, cigarettes, alcohol_units, situation, emotion,
-          automatic_thoughts, behavior, coping_shown } = req.body;
+  const { logged_at, cigarettes, alcohol_units, shorts_hours, is_victory,
+          situation, emotion, automatic_thoughts, behavior, coping_shown } = req.body;
   if (!logged_at) return res.status(400).json({ error: 'Date/heure requise' });
   const id = randomUUID();
   db.prepare(`
     INSERT INTO batches
-      (id, logged_at, cigarettes, alcohol_units, situation, emotion,
-       automatic_thoughts, behavior, coping_shown)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, logged_at, cigarettes, alcohol_units, shorts_hours, is_victory,
+       situation, emotion, automatic_thoughts, behavior, coping_shown)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id, logged_at,
     Number(cigarettes)    || 0,
     Number(alcohol_units) || 0,
+    Number(shorts_hours)  || 0,
+    is_victory ? 1 : 0,
     situation?.trim()          || null,
     emotion?.trim()            || null,
     automatic_thoughts?.trim() || null,
@@ -110,6 +116,7 @@ app.get('/api/stats', auth, (req, res) => {
       SELECT substr(logged_at, 1, 10) AS day,
              SUM(cigarettes)    AS cigarettes,
              SUM(alcohol_units) AS alcohol_units,
+             SUM(shorts_hours)  AS shorts_hours,
              COUNT(*)           AS batches
       FROM batches
       WHERE substr(logged_at, 1, 7) = ?
@@ -118,7 +125,6 @@ app.get('/api/stats', auth, (req, res) => {
     return res.json({ period: 'month', month, rows });
   }
 
-  // Semaine : calcul du lundi de la semaine de référence
   const refDay = (date || new Date().toISOString()).slice(0, 10);
   const d      = new Date(refDay + 'T12:00:00');
   const dow    = d.getDay();
@@ -133,6 +139,7 @@ app.get('/api/stats', auth, (req, res) => {
     SELECT substr(logged_at, 1, 10) AS day,
            SUM(cigarettes)    AS cigarettes,
            SUM(alcohol_units) AS alcohol_units,
+           SUM(shorts_hours)  AS shorts_hours,
            COUNT(*)           AS batches
     FROM batches
     WHERE substr(logged_at, 1, 10) BETWEEN ? AND ?
@@ -145,7 +152,7 @@ app.get('/api/stats', auth, (req, res) => {
 app.get('/api/coping', auth, (req, res) => {
   const q = req.query.all === '1'
     ? 'SELECT * FROM coping_strategies ORDER BY active DESC, created_at DESC'
-    : 'SELECT * FROM coping_strategies WHERE active = 1 ORDER BY RANDOM() LIMIT 3';
+    : 'SELECT * FROM coping_strategies WHERE active = 1 ORDER BY RANDOM() LIMIT 1';
   res.json(db.prepare(q).all());
 });
 
@@ -180,9 +187,11 @@ app.get('/api/export', auth, (req, res) => {
   const batches  = db.prepare('SELECT * FROM batches ORDER BY logged_at ASC').all();
   const monthly  = db.prepare(`
     SELECT substr(logged_at, 1, 7) AS mois,
-           SUM(cigarettes)              AS total_cigarettes,
-           ROUND(SUM(alcohol_units), 1) AS total_alcool,
-           COUNT(*)                     AS nb_entrees
+           SUM(CASE WHEN is_victory = 0 THEN cigarettes ELSE 0 END)    AS total_cigarettes,
+           ROUND(SUM(CASE WHEN is_victory = 0 THEN alcohol_units ELSE 0 END), 1) AS total_alcool,
+           ROUND(SUM(CASE WHEN is_victory = 0 THEN shorts_hours ELSE 0 END), 1)  AS total_shorts,
+           SUM(CASE WHEN is_victory = 1 THEN 1 ELSE 0 END)             AS nb_victoires,
+           COUNT(*)                                                      AS nb_entrees
     FROM batches GROUP BY mois ORDER BY mois ASC
   `).all();
   const coping   = db.prepare('SELECT * FROM coping_strategies ORDER BY created_at ASC').all();
@@ -192,12 +201,14 @@ app.get('/api/export', auth, (req, res) => {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(batches.map((b, i) => ({
     '#': i + 1,
     'Date': b.logged_at.replace('T', ' ').slice(0, 16),
+    'Victoire': b.is_victory ? 'Oui' : 'Non',
     'Cigarettes': b.cigarettes,
     'Alcool (unités standardisées)': b.alcohol_units,
+    'Shorts/Reels (heures)': b.shorts_hours,
     'Situation': b.situation || '',
     'Émotion': b.emotion || '',
     'Pensées automatiques': b.automatic_thoughts || '',
-    'Comportement': b.behavior || '',
+    'Comportement néfaste': b.behavior || '',
     'Dérivatif proposé': b.coping_shown ? 'Oui' : 'Non',
   }))), 'Consommations');
 
@@ -206,6 +217,8 @@ app.get('/api/export', auth, (req, res) => {
     'Mois': r.mois,
     'Total cigarettes': r.total_cigarettes,
     'Total alcool (unités)': r.total_alcool,
+    'Total shorts (heures)': r.total_shorts,
+    'Victoires': r.nb_victoires,
     "Nombre d'entrées": r.nb_entrees,
   }))), 'Résumé mensuel');
 

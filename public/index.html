@@ -18,6 +18,9 @@
     .bar      { width: 100%; border-radius: 4px 4px 0 0; min-height: 2px; transition: height .3s; }
     .cal-day  { aspect-ratio: 1; border-radius: 6px; display: flex; flex-direction: column;
                 align-items: center; justify-content: center; font-size: .65rem; }
+    .emotion-pill { transition: all .15s; cursor: pointer; user-select: none; -webkit-user-select: none; }
+    .emotion-pill.selected { background: #1e293b !important; color: white !important; border-color: #1e293b !important; }
+    .emotion-pill-victory.selected { background: #d97706 !important; color: white !important; border-color: #d97706 !important; }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen">
@@ -57,7 +60,7 @@
   <div class="px-4 py-4">
 
     <!-- ───────────────────────────── TODAY ───────────────────────────────── -->
-    <div id="tab-today" class="tab-content active space-y-4">
+    <div id="tab-today" class="tab-content active space-y-3">
 
       <div class="grid grid-cols-2 gap-3">
         <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4">
@@ -72,10 +75,22 @@
         </div>
       </div>
 
-      <button onclick="openLogFlow()"
-        class="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-4 rounded-2xl text-sm transition flex items-center justify-center gap-2 shadow-sm">
-        <span class="text-xl leading-none">+</span> Enregistrer une consommation
-      </button>
+      <div class="bg-sky-50 border border-sky-100 rounded-2xl p-4">
+        <p class="text-xs font-semibold text-sky-500 uppercase tracking-wide">📱 Shorts / Reels</p>
+        <p class="text-4xl font-bold text-sky-600 mt-1" id="today-shorts">0</p>
+        <p class="text-xs text-sky-400 mt-1">heures aujourd'hui</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="openLogFlow()"
+          class="bg-slate-800 hover:bg-slate-900 text-white font-semibold py-4 rounded-2xl text-sm transition flex items-center justify-center gap-2 shadow-sm">
+          <span class="text-xl leading-none">+</span> Enregistrer
+        </button>
+        <button onclick="openVictoryModal()"
+          class="bg-amber-400 hover:bg-amber-500 text-white font-semibold py-4 rounded-2xl text-sm transition flex items-center justify-center gap-2 shadow-sm">
+          <span class="text-xl leading-none">🏆</span> Victoire !
+        </button>
+      </div>
 
       <div>
         <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Entrées du jour</p>
@@ -120,6 +135,10 @@
           <p class="text-xs text-violet-300">unités</p>
         </div>
       </div>
+      <div class="bg-sky-50 border border-sky-100 rounded-2xl p-3">
+        <p class="text-xs font-medium text-sky-500">📱 Total shorts (h)</p>
+        <p class="text-2xl font-bold text-sky-600 mt-1" id="stats-shorts-total">–</p>
+      </div>
 
       <div class="bg-white rounded-2xl p-4 shadow-sm">
         <div id="stats-chart"></div>
@@ -151,7 +170,7 @@
 
       <div class="bg-white rounded-2xl p-5 shadow-sm">
         <p class="text-sm font-bold text-slate-700 mb-1">🌱 Stratégies de coping</p>
-        <p class="text-xs text-slate-400 mb-4">Ces propositions apparaissent avant chaque enregistrement.</p>
+        <p class="text-xs text-slate-400 mb-4">Une proposition aléatoire apparaît avant chaque enregistrement.</p>
 
         <div class="space-y-2 mb-4">
           <input id="coping-title" type="text" placeholder="Titre  (ex : Respiration 4-7-8)"
@@ -201,9 +220,9 @@
     <div class="text-center mb-5">
       <p class="text-4xl mb-1">🌿</p>
       <h2 class="text-lg font-bold text-slate-800">Une pause ?</h2>
-      <p class="text-xs text-slate-400 mt-1">Avant d'en passer là, que dirais-tu d'essayer…</p>
+      <p class="text-xs text-slate-400 mt-1">Avant d'en passer là, et si tu essayais ça…</p>
     </div>
-    <div id="coping-suggestions" class="space-y-2 mb-5 min-h-16"></div>
+    <div id="coping-suggestions" class="mb-5 min-h-16"></div>
     <div class="space-y-2">
       <button onclick="proceedToLog(true)"
         class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-2xl text-sm transition">
@@ -233,7 +252,7 @@
         class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400">
     </div>
 
-    <!-- Quantités -->
+    <!-- Cigarettes + Alcool -->
     <div class="grid grid-cols-2 gap-3 mb-4">
       <div>
         <label class="text-xs font-semibold text-amber-600 block mb-1.5">🚬 Cigarettes</label>
@@ -244,8 +263,15 @@
         <label class="text-xs font-semibold text-violet-600 block mb-1.5">🍷 Unités alcool</label>
         <input id="log-alc" type="number" min="0" step="0.5" placeholder="0"
           class="w-full border border-violet-200 bg-violet-50 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
-        <p class="text-xs text-slate-400 mt-1 leading-tight">1 u ≈ 1 verre vin (10 cl) = 1 bière 25 cl = 1 shot 3 cl</p>
+        <p class="text-xs text-slate-400 mt-1 leading-tight">1 u ≈ 1 verre vin (10 cl)</p>
       </div>
+    </div>
+
+    <!-- Shorts -->
+    <div class="mb-4">
+      <label class="text-xs font-semibold text-sky-600 block mb-1.5">📱 Shorts / Reels (heures)</label>
+      <input id="log-shorts" type="number" min="0" step="0.25" placeholder="0"
+        class="w-full border border-sky-200 bg-sky-50 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400">
     </div>
 
     <!-- Champs CBT -->
@@ -256,9 +282,10 @@
           class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 resize-none h-16"></textarea>
       </div>
       <div>
-        <label class="text-xs font-semibold text-slate-600 block mb-1.5">💭 Émotion</label>
-        <textarea id="log-emotion" placeholder="Quelle(s) émotion(s) ressentais-tu ?"
-          class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 resize-none h-16"></textarea>
+        <label class="text-xs font-semibold text-slate-600 block mb-2">💭 Émotion</label>
+        <div id="log-emotion-pills" class="flex flex-wrap gap-1.5 mb-2"></div>
+        <input id="log-emotion-custom" type="text" placeholder="Autre émotion ou précision…"
+          class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400">
       </div>
       <div>
         <label class="text-xs font-semibold text-slate-600 block mb-1.5">🧠 Pensées automatiques</label>
@@ -266,8 +293,8 @@
           class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 resize-none h-16"></textarea>
       </div>
       <div>
-        <label class="text-xs font-semibold text-slate-600 block mb-1.5">⚡ Comportement</label>
-        <textarea id="log-behavior" placeholder="Qu'as-tu fait ?"
+        <label class="text-xs font-semibold text-slate-600 block mb-1.5">⚡ Autre comportement néfaste (libre)</label>
+        <textarea id="log-behavior" placeholder="Ce que tu as fait d'autre (pas les 3 trackés ci-dessus)…"
           class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 resize-none h-16"></textarea>
       </div>
     </div>
@@ -280,12 +307,92 @@
   </div>
 </div>
 
+<!-- ────────────────────────── VICTORY MODAL ─────────────────────────────── -->
+<div id="victory-modal" class="hidden fixed inset-0 modal-bg flex items-end justify-center z-40">
+  <div class="bg-white rounded-t-3xl shadow-2xl w-full max-w-md p-6 max-h-[85vh] overflow-y-auto scroll-thin">
+
+    <div class="flex justify-between items-center mb-2">
+      <h2 class="text-base font-bold text-amber-600">🏆 Déposer une victoire</h2>
+      <button onclick="closeVictoryModal()" class="text-2xl text-slate-300 hover:text-slate-500 transition leading-none">×</button>
+    </div>
+    <p class="text-xs text-slate-400 mb-5">Un moment, une émotion, quelque chose que tu veux garder en mémoire.</p>
+
+    <!-- Date/heure -->
+    <div class="mb-4">
+      <label class="text-xs font-semibold text-slate-500 block mb-1.5">Date & heure</label>
+      <input id="victory-datetime" type="datetime-local"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+    </div>
+
+    <!-- Champs CBT -->
+    <div class="space-y-3 mb-5">
+      <div>
+        <label class="text-xs font-semibold text-slate-600 block mb-1.5">📍 Situation</label>
+        <textarea id="victory-situation" placeholder="Où étais-tu ? Que faisais-tu ?"
+          class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none h-16"></textarea>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-slate-600 block mb-2">💭 Émotion</label>
+        <div id="victory-emotion-pills" class="flex flex-wrap gap-1.5 mb-2"></div>
+        <input id="victory-emotion-custom" type="text" placeholder="Autre émotion ou précision…"
+          class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-slate-600 block mb-1.5">🧠 Pensées automatiques</label>
+        <textarea id="victory-thoughts" placeholder="Quelles pensées t'ont traversé l'esprit ?"
+          class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none h-16"></textarea>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-slate-600 block mb-1.5">⚡ Comportement</label>
+        <textarea id="victory-behavior" placeholder="Ce que tu as fait…"
+          class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none h-16"></textarea>
+      </div>
+    </div>
+
+    <p id="victory-err" class="text-red-500 text-xs text-center mb-2 hidden"></p>
+    <button onclick="submitVictory()"
+      class="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-4 rounded-2xl text-sm transition">
+      🏆 Enregistrer
+    </button>
+  </div>
+</div>
+
 <script>
 // ── State ────────────────────────────────────────────────────────────────────
 let pwd = '';
 let copingWasShown = false;
 let statsPeriod   = 'week';
 let statsRefDate  = new Date().toISOString().slice(0, 10);
+
+// ── Émotions ─────────────────────────────────────────────────────────────────
+const EMOTIONS_LOG = [
+  'Anxieux·se','Stressé·e','Frustré·e','Triste','Seul·e','Ennuyé·e',
+  'Irrité·e','Dépassé·e','Fatigué·e','Vide','En colère','Nerveux·se',
+  'Coupable','Nostalgique','Impatient·e',
+  'Heureux·se','Soulagé·e','Calme','Fier·e','Reconnaissant·e',
+];
+
+const EMOTIONS_VICTORY = [
+  'Fier·e','Heureux·se','Soulagé·e','Calme','Reconnaissant·e','Satisfait·e','Connecté·e',
+  'Anxieux·se','Stressé·e','Frustré·e','Triste','Seul·e','Ennuyé·e',
+  'Irrité·e','Dépassé·e','Fatigué·e','Vide','Nerveux·se','Coupable',
+];
+
+function renderPills(containerId, emotions, extraClass) {
+  document.getElementById(containerId).innerHTML = emotions.map(e =>
+    `<button type="button"
+      class="emotion-pill ${extraClass || ''} px-2.5 py-1 rounded-full text-xs border border-slate-200 text-slate-500 bg-white"
+      data-emotion="${esc(e)}"
+      onclick="this.classList.toggle('selected')">${e}</button>`
+  ).join('');
+}
+
+function getEmotionValue(pillsId, customId) {
+  const pills = [...document.querySelectorAll(`#${pillsId} .emotion-pill.selected`)]
+    .map(el => el.dataset.emotion);
+  const custom = document.getElementById(customId).value.trim();
+  return [...pills, ...(custom ? [custom] : [])].join(', ');
+}
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 (function init() {
@@ -365,10 +472,12 @@ async function loadToday() {
   if (!res) return;
   const batches = await res.json();
 
-  const cigTotal = batches.reduce((s, b) => s + b.cigarettes, 0);
-  const alcTotal = batches.reduce((s, b) => s + b.alcohol_units, 0);
-  document.getElementById('today-cig').textContent = cigTotal;
-  document.getElementById('today-alc').textContent = +alcTotal.toFixed(1);
+  const cigTotal    = batches.reduce((s, b) => s + b.cigarettes, 0);
+  const alcTotal    = batches.reduce((s, b) => s + b.alcohol_units, 0);
+  const shortsTotal = batches.reduce((s, b) => s + (b.shorts_hours || 0), 0);
+  document.getElementById('today-cig').textContent    = cigTotal;
+  document.getElementById('today-alc').textContent    = +alcTotal.toFixed(1);
+  document.getElementById('today-shorts').textContent = fmtH(shortsTotal);
 
   const container = document.getElementById('today-list');
   if (!batches.length) {
@@ -378,23 +487,40 @@ async function loadToday() {
   container.innerHTML = batches.map(b => batchCard(b, true)).join('');
 }
 
+function fmtH(h) {
+  if (!h) return '0';
+  return h % 1 === 0 ? String(h) : +h.toFixed(1) + '';
+}
+
 function batchCard(b, showDelete) {
   const time    = b.logged_at.slice(11, 16);
   const dateStr = b.logged_at.slice(0, 10);
   const pills   = [];
-  if (b.cigarettes   > 0) pills.push(`<span class="bg-amber-100  text-amber-700  px-2 py-0.5 rounded-full text-xs font-medium">${b.cigarettes} 🚬</span>`);
-  if (b.alcohol_units > 0) pills.push(`<span class="bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full text-xs font-medium">${+b.alcohol_units.toFixed(1)} 🍷</span>`);
-  if (b.cigarettes === 0 && b.alcohol_units === 0) pills.push(`<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-xs font-medium">✓ Évité</span>`);
+
+  if (b.is_victory) {
+    pills.push(`<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-xs font-medium">🏆 Victoire</span>`);
+  } else {
+    if (b.cigarettes    > 0) pills.push(`<span class="bg-amber-100  text-amber-700  px-2 py-0.5 rounded-full text-xs font-medium">${b.cigarettes} 🚬</span>`);
+    if (b.alcohol_units > 0) pills.push(`<span class="bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full text-xs font-medium">${+b.alcohol_units.toFixed(1)} 🍷</span>`);
+    if ((b.shorts_hours || 0) > 0) pills.push(`<span class="bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full text-xs font-medium">${fmtH(b.shorts_hours)}h 📱</span>`);
+    if (!b.cigarettes && !b.alcohol_units && !(b.shorts_hours || 0)) {
+      pills.push(`<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-xs font-medium">✓ Évité</span>`);
+    }
+  }
 
   const cbtFields = [
     b.situation          && `<p class="text-xs text-slate-500"><span class="font-semibold text-slate-600">📍 Situation</span> — ${esc(b.situation)}</p>`,
     b.emotion            && `<p class="text-xs text-slate-500"><span class="font-semibold text-slate-600">💭 Émotion</span> — ${esc(b.emotion)}</p>`,
     b.automatic_thoughts && `<p class="text-xs text-slate-500"><span class="font-semibold text-slate-600">🧠 Pensées</span> — ${esc(b.automatic_thoughts)}</p>`,
-    b.behavior           && `<p class="text-xs text-slate-500"><span class="font-semibold text-slate-600">⚡ Comportement</span> — ${esc(b.behavior)}</p>`,
+    b.behavior && `<p class="text-xs text-slate-500"><span class="font-semibold text-slate-600">⚡ Comportement</span> — ${esc(b.behavior)}</p>`,
   ].filter(Boolean);
 
+  const cardBg = b.is_victory
+    ? 'bg-amber-50 border-amber-100'
+    : 'bg-white border-slate-100';
+
   return `
-    <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm mb-2">
+    <div class="${cardBg} rounded-2xl p-4 border shadow-sm mb-2">
       <div class="flex justify-between items-start mb-2">
         <div class="flex flex-wrap gap-1">${pills.join('') || '<span class="text-xs text-slate-300">—</span>'}</div>
         <div class="flex items-center gap-2 shrink-0 ml-2">
@@ -425,12 +551,13 @@ async function openLogFlow() {
     return;
   }
 
-  document.getElementById('coping-suggestions').innerHTML = strategies.map(s => `
+  const s = strategies[0];
+  document.getElementById('coping-suggestions').innerHTML = `
     <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-3">
       <p class="text-sm font-semibold text-emerald-800">${esc(s.title)}</p>
       ${s.description ? `<p class="text-xs text-emerald-600 mt-0.5">${esc(s.description)}</p>` : ''}
     </div>
-  `).join('');
+  `;
   document.getElementById('coping-modal').classList.remove('hidden');
 }
 
@@ -443,14 +570,16 @@ function proceedToLog(copingTried) {
 function openLogModal() {
   const now   = new Date();
   const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-  document.getElementById('log-datetime').value  = local;
-  document.getElementById('log-cig').value       = '';
-  document.getElementById('log-alc').value       = '';
-  document.getElementById('log-situation').value = '';
-  document.getElementById('log-emotion').value   = '';
-  document.getElementById('log-thoughts').value  = '';
-  document.getElementById('log-behavior').value  = '';
+  document.getElementById('log-datetime').value       = local;
+  document.getElementById('log-cig').value            = '';
+  document.getElementById('log-alc').value            = '';
+  document.getElementById('log-shorts').value         = '';
+  document.getElementById('log-situation').value      = '';
+  document.getElementById('log-emotion-custom').value = '';
+  document.getElementById('log-thoughts').value       = '';
+  document.getElementById('log-behavior').value       = '';
   document.getElementById('log-err').classList.add('hidden');
+  renderPills('log-emotion-pills', EMOTIONS_LOG);
   document.getElementById('log-modal').classList.remove('hidden');
 }
 
@@ -460,10 +589,11 @@ function closeLogModal() {
 
 async function submitLog() {
   const dt       = document.getElementById('log-datetime').value;
-  const cig      = parseFloat(document.getElementById('log-cig').value)  || 0;
-  const alc      = parseFloat(document.getElementById('log-alc').value)  || 0;
+  const cig      = parseFloat(document.getElementById('log-cig').value)    || 0;
+  const alc      = parseFloat(document.getElementById('log-alc').value)    || 0;
+  const shorts   = parseFloat(document.getElementById('log-shorts').value) || 0;
   const sit      = document.getElementById('log-situation').value.trim();
-  const emo      = document.getElementById('log-emotion').value.trim();
+  const emo      = getEmotionValue('log-emotion-pills', 'log-emotion-custom');
   const thoughts = document.getElementById('log-thoughts').value.trim();
   const behav    = document.getElementById('log-behavior').value.trim();
   const errEl    = document.getElementById('log-err');
@@ -480,6 +610,8 @@ async function submitLog() {
       logged_at:          dt.length === 16 ? dt + ':00' : dt,
       cigarettes:         cig,
       alcohol_units:      alc,
+      shorts_hours:       shorts,
+      is_victory:         false,
       situation:          sit      || null,
       emotion:            emo      || null,
       automatic_thoughts: thoughts || null,
@@ -490,6 +622,62 @@ async function submitLog() {
 
   if (res?.ok) {
     closeLogModal();
+    loadToday();
+  } else {
+    errEl.textContent = 'Erreur lors de l\'enregistrement';
+    errEl.classList.remove('hidden');
+  }
+}
+
+// ── VICTORY FLOW ──────────────────────────────────────────────────────────────
+function openVictoryModal() {
+  const now   = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  document.getElementById('victory-datetime').value       = local;
+  document.getElementById('victory-situation').value      = '';
+  document.getElementById('victory-emotion-custom').value = '';
+  document.getElementById('victory-thoughts').value       = '';
+  document.getElementById('victory-behavior').value       = '';
+  document.getElementById('victory-err').classList.add('hidden');
+  renderPills('victory-emotion-pills', EMOTIONS_VICTORY, 'emotion-pill-victory');
+  document.getElementById('victory-modal').classList.remove('hidden');
+}
+
+function closeVictoryModal() {
+  document.getElementById('victory-modal').classList.add('hidden');
+}
+
+async function submitVictory() {
+  const dt    = document.getElementById('victory-datetime').value;
+  const errEl = document.getElementById('victory-err');
+  if (!dt) {
+    errEl.textContent = 'La date est requise';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  const emotion  = getEmotionValue('victory-emotion-pills', 'victory-emotion-custom');
+  const sit      = document.getElementById('victory-situation').value.trim();
+  const thoughts = document.getElementById('victory-thoughts').value.trim();
+  const behav    = document.getElementById('victory-behavior').value.trim();
+
+  const res = await api('/api/batches', {
+    method: 'POST',
+    body: JSON.stringify({
+      logged_at:          dt.length === 16 ? dt + ':00' : dt,
+      cigarettes:         0,
+      alcohol_units:      0,
+      shorts_hours:       0,
+      is_victory:         true,
+      situation:          sit      || null,
+      emotion:            emotion  || null,
+      automatic_thoughts: thoughts || null,
+      behavior:           behav    || null,
+      coping_shown:       false,
+    }),
+  });
+
+  if (res?.ok) {
+    closeVictoryModal();
     loadToday();
   } else {
     errEl.textContent = 'Erreur lors de l\'enregistrement';
@@ -521,10 +709,12 @@ async function loadStats() {
   if (!res) return;
   const data = await res.json();
 
-  const cigTotal = data.rows.reduce((s, r) => s + r.cigarettes, 0);
-  const alcTotal = data.rows.reduce((s, r) => s + r.alcohol_units, 0);
-  document.getElementById('stats-cig-total').textContent = cigTotal;
-  document.getElementById('stats-alc-total').textContent = +alcTotal.toFixed(1);
+  const cigTotal    = data.rows.reduce((s, r) => s + r.cigarettes, 0);
+  const alcTotal    = data.rows.reduce((s, r) => s + r.alcohol_units, 0);
+  const shortsTotal = data.rows.reduce((s, r) => s + (r.shorts_hours || 0), 0);
+  document.getElementById('stats-cig-total').textContent    = cigTotal;
+  document.getElementById('stats-alc-total').textContent    = +alcTotal.toFixed(1);
+  document.getElementById('stats-shorts-total').textContent = fmtH(shortsTotal);
 
   if (statsPeriod === 'week') renderWeekStats(data);
   else                        renderMonthStats(data);
@@ -540,7 +730,7 @@ function renderWeekStats(data) {
     const d   = new Date(from);
     d.setDate(from.getDate() + i);
     const key = d.toISOString().slice(0, 10);
-    return { key, label: DAYS[i], ...(dayMap[key] || { cigarettes: 0, alcohol_units: 0 }) };
+    return { key, label: DAYS[i], ...(dayMap[key] || { cigarettes: 0, alcohol_units: 0, shorts_hours: 0 }) };
   });
 
   document.getElementById('stats-label').textContent =
@@ -549,14 +739,12 @@ function renderWeekStats(data) {
   const MAX_H = 56;
   const today = new Date().toISOString().slice(0, 10);
 
-  const renderBars = (type, color, activeColor) => {
-    const vals  = days.map(d => type === 'cig' ? d.cigarettes : d.alcohol_units);
+  const renderBars = (type, color, activeColor, labelColor, icon) => {
+    const vals  = days.map(d => type === 'cig' ? d.cigarettes : type === 'alc' ? d.alcohol_units : (d.shorts_hours || 0));
     const maxV  = Math.max(...vals, 1);
     return `
       <div class="mb-4">
-        <p class="text-xs font-semibold ${type === 'cig' ? 'text-amber-500' : 'text-violet-500'} mb-2">
-          ${type === 'cig' ? '🚬 Cigarettes' : '🍷 Alcool (unités)'}
-        </p>
+        <p class="text-xs font-semibold ${labelColor} mb-2">${icon}</p>
         <div class="flex gap-1">
           ${days.map((d, i) => {
             const v   = vals[i];
@@ -568,8 +756,8 @@ function renderWeekStats(data) {
                   <div class="bar ${isT ? activeColor : color}" style="height:${h}px"></div>
                 </div>
                 <span class="text-xs text-slate-400 leading-none">${d.label}</span>
-                <span class="text-xs font-medium leading-none ${type === 'cig' ? 'text-amber-500' : 'text-violet-500'}" style="min-height:16px">
-                  ${v > 0 ? (type === 'cig' ? v : +v.toFixed(1)) : ''}
+                <span class="text-xs font-medium leading-none ${labelColor}" style="min-height:16px">
+                  ${v > 0 ? (type === 'shorts' ? fmtH(v) : type === 'cig' ? v : +v.toFixed(1)) : ''}
                 </span>
               </div>
             `;
@@ -580,8 +768,9 @@ function renderWeekStats(data) {
   };
 
   document.getElementById('stats-chart').innerHTML =
-    renderBars('cig', 'bg-amber-200',  'bg-amber-500') +
-    renderBars('alc', 'bg-violet-200', 'bg-violet-500');
+    renderBars('cig',    'bg-amber-200',  'bg-amber-500',  'text-amber-500',  '🚬 Cigarettes') +
+    renderBars('alc',    'bg-violet-200', 'bg-violet-500', 'text-violet-500', '🍷 Alcool (unités)') +
+    renderBars('shorts', 'bg-sky-200',    'bg-sky-500',    'text-sky-500',    '📱 Shorts (h)');
 }
 
 function renderMonthStats(data) {
@@ -595,8 +784,9 @@ function renderMonthStats(data) {
   const offset      = (new Date(year, mon - 1, 1).getDay() + 6) % 7;
   const today       = new Date().toISOString().slice(0, 10);
 
-  const maxCig = Math.max(...data.rows.map(r => r.cigarettes), 1);
-  const maxAlc = Math.max(...data.rows.map(r => r.alcohol_units), 1);
+  const maxCig    = Math.max(...data.rows.map(r => r.cigarettes), 1);
+  const maxAlc    = Math.max(...data.rows.map(r => r.alcohol_units), 1);
+  const maxShorts = Math.max(...data.rows.map(r => r.shorts_hours || 0), 1);
 
   const buildCalendar = (type, label, textColor, paletteFn) => {
     const empties = Array.from({ length: offset }, () => '<div></div>').join('');
@@ -604,15 +794,16 @@ function renderMonthStats(data) {
       const d   = i + 1;
       const key = `${data.month}-${String(d).padStart(2, '0')}`;
       const row = dayMap[key];
-      const val = row ? (type === 'cig' ? row.cigarettes : row.alcohol_units) : 0;
-      const max = type === 'cig' ? maxCig : maxAlc;
+      const val = row ? (type === 'cig' ? row.cigarettes : type === 'alc' ? row.alcohol_units : (row.shorts_hours || 0)) : 0;
+      const max = type === 'cig' ? maxCig : type === 'alc' ? maxAlc : maxShorts;
       const pct = val > 0 ? val / max : 0;
       const isT = key === today;
       const { bg, text } = paletteFn(pct, val > 0);
+      const dispVal = type === 'shorts' ? (val > 0 ? fmtH(val) : '') : (val > 0 ? (type === 'cig' ? val : +val.toFixed(1)) : '');
       return `
         <div class="cal-day ${bg} ${text} ${isT ? 'ring-2 ring-slate-400 ring-offset-1' : ''}">
           <span style="font-size:.65rem;line-height:1">${d}</span>
-          ${val > 0 ? `<span style="font-size:.55rem;font-weight:700;line-height:1">${type==='cig' ? val : +val.toFixed(1)}</span>` : ''}
+          ${val > 0 ? `<span style="font-size:.55rem;font-weight:700;line-height:1">${dispVal}</span>` : ''}
         </div>
       `;
     }).join('');
@@ -639,10 +830,17 @@ function renderMonthStats(data) {
     if (pct < .7)  return { bg: 'bg-violet-400', text: 'text-white' };
     return               { bg: 'bg-violet-600',  text: 'text-white' };
   };
+  const shortsPalette = (pct, hasVal) => {
+    if (!hasVal) return { bg: 'bg-slate-50',   text: 'text-slate-400' };
+    if (pct < .35) return { bg: 'bg-sky-200',  text: 'text-sky-700' };
+    if (pct < .7)  return { bg: 'bg-sky-400',  text: 'text-white' };
+    return               { bg: 'bg-sky-600',   text: 'text-white' };
+  };
 
   document.getElementById('stats-chart').innerHTML =
-    buildCalendar('cig', '🚬 Cigarettes',      'text-amber-500',  cigPalette) +
-    buildCalendar('alc', '🍷 Alcool (unités)', 'text-violet-500', alcPalette);
+    buildCalendar('cig',    '🚬 Cigarettes',      'text-amber-500',  cigPalette) +
+    buildCalendar('alc',    '🍷 Alcool (unités)', 'text-violet-500', alcPalette) +
+    buildCalendar('shorts', '📱 Shorts (h)',       'text-sky-500',    shortsPalette);
 }
 
 function fmtDate(s) {
